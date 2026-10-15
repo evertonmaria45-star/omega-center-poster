@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Omega Center Poster — Integração TikTok (demonstração)</title>
+<link rel="icon" href="icon.png">
+<style>
+  :root { --fundo:#0f172a; --card:#1e293b; --borda:#334155; --azul:#38bdf8; --verde:#22c55e; --vermelho:#ef4444; --texto:#e2e8f0; --fraco:#94a3b8; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, "Segoe UI", Arial, sans-serif; background:var(--fundo); color:var(--texto); }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px 60px; }
+  header { display:flex; align-items:center; gap:16px; margin-bottom: 24px; }
+  header img { width:64px; height:64px; border-radius:14px; }
+  h1 { font-size:1.4rem; margin:0; }
+  header p { margin:4px 0 0; color:var(--fraco); font-size:.9rem; }
+  .card { background:var(--card); border:1px solid var(--borda); border-radius:14px; padding:22px; margin-bottom:18px; }
+  h2 { font-size:1.05rem; margin:0 0 10px; color:var(--azul); }
+  p { line-height:1.5; }
+  ul { line-height:1.6; }
+  .btn { display:inline-block; border:0; cursor:pointer; font-size:1rem; font-weight:600; padding:13px 26px; border-radius:10px; text-decoration:none; }
+  .btn-tt { background:#fe2c55; color:#fff; }
+  .btn-tt:hover { background:#e0234b; }
+  .btn-azul { background:var(--azul); color:#0f172a; }
+  .btn-azul[disabled] { opacity:.5; cursor:not-allowed; }
+  .perfil { display:flex; align-items:center; gap:14px; margin-bottom:16px; }
+  .perfil img { width:64px; height:64px; border-radius:50%; border:2px solid var(--borda); background:#0f172a; }
+  .perfil .nome { font-weight:700; }
+  .perfil .usuario { color:var(--fraco); font-size:.9rem; }
+  label { display:block; margin: 14px 0 6px; font-size:.9rem; color:var(--fraco); }
+  select { width:100%; padding:11px; border-radius:8px; background:#0f172a; color:var(--texto); border:1px solid var(--borda); font-size:.95rem; }
+  .ok { border-left: 4px solid var(--verde); }
+  .erro { border-left: 4px solid var(--vermelho); }
+  code { background:#0f172a; padding:2px 6px; border-radius:6px; font-size:.85rem; word-break:break-all; }
+  footer { color:var(--fraco); font-size:.85rem; text-align:center; margin-top:24px; }
+  footer a { color:var(--azul); text-decoration:none; }
+  .oculto { display:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <img src="icon.png" alt="Omega Center Poster">
+    <div>
+      <h1>Omega Center Poster</h1>
+      <p>Demonstração da integração oficial com o TikTok (Login Kit + Content Posting API)</p>
+    </div>
+  </header>
+
+  <div class="card" id="passo1">
+    <h2>1. Entrar com o TikTok</h2>
+    <p>Esta página de demonstração entra na <strong>conta TikTok do próprio dono</strong> do aplicativo
+       (OMEGA CENTER). O aplicativo nunca publica em contas de terceiros.</p>
+    <p>Permissões usadas: <code>user.info.basic</code>, <code>video.publish</code>, <code>video.upload</code>.</p>
+    <button class="btn btn-tt" id="btnLogin">Login with TikTok</button>
+  </div>
+
+  <div class="card oculto" id="passo2">
+    <h2>2. Autorizar a publicação</h2>
+    <div class="perfil">
+      <img id="avatar" src="icon.png" alt="avatar">
+      <div>
+        <div class="nome" id="apelido">—</div>
+        <div class="usuario" id="usuario">—</div>
+      </div>
+    </div>
+    <p>Vídeo de teste: <strong>video_teste_omega.mp4</strong> (10 segundos).</p>
+    <label for="privacidade">Quem pode ver o vídeo</label>
+    <select id="privacidade"></select>
+    <p style="margin-top:18px"><button class="btn btn-azul" id="btnPublicar">Publicar vídeo de teste</button></p>
+    <p style="color:var(--fraco); font-size:.85rem">O aplicativo ainda não passou pela auditoria do TikTok,
+       por isso o vídeo sai como <strong>privado (SELF_ONLY)</strong>.</p>
+  </div>
+
+  <div class="card oculto ok" id="passo3ok">
+    <h2>✅ Vídeo publicado com sucesso</h2>
+    <p>O vídeo foi enviado para a conta do dono pela API oficial do TikTok.</p>
+    <p>Identificador da publicação: <code id="pubId">—</code><br>
+       Situação: <code id="pubStatus">—</code><br>
+       Visibilidade: <code id="pubPriv">—</code></p>
+  </div>
+
+  <div class="card oculto erro" id="passo3erro">
+    <h2>⚠️ Não foi possível publicar</h2>
+    <p id="msgErro">—</p>
+  </div>
+
+  <footer>
+    <p>© 2026 OMEGA CENTER · <a href="index.html">Início</a> · <a href="termos.html">Termos de Uso</a> · <a href="privacy.html">Política de Privacidade</a></p>
+  </footer>
+</div>
+
+<script>
+  // Chave do cliente do aplicativo (modo Sandbox/teste). NAO e o segredo.
+  var CLIENT_KEY = "sbawshkrcgc67snlfo";
+  var BACKEND = "http://127.0.0.1:8799";
+  var ESCOPO = "user.info.basic,video.publish,video.upload";
+  var REDIRECT_URI = location.origin + location.pathname;
+
+  function qs(k) { return new URLSearchParams(location.search).get(k); }
+
+  if (qs("code")) {
+    // voltou do TikTok: manda o codigo para o servidor local (troca por token e busca os dados do criador)
+    location.replace(BACKEND + "/callback?" + location.search.replace(/^\?/, ""));
+  } else if (qs("sess")) {
+    // dados do criador prontos
+    document.getElementById("passo1").classList.add("oculto");
+    document.getElementById("passo2").classList.remove("oculto");
+    document.getElementById("apelido").textContent = qs("apelido") || "(conta autorizada)";
+    document.getElementById("usuario").textContent = qs("usuario") ? ("@" + qs("usuario")) : "";
+    if (qs("avatar")) { document.getElementById("avatar").src = qs("avatar"); }
+    var sel = document.getElementById("privacidade");
+    var opts = (qs("opcoes") || "SELF_ONLY").split(",");
+    var rotulos = {
+      "SELF_ONLY": "Somente eu (privado)",
+      "MUTUAL_FOLLOW_FRIENDS": "Amigos (seguidores mútuos)",
+      "FOLLOWER_OF_CREATOR": "Seguidores",
+      "PUBLIC_TO_EVERYONE": "Todos (público)"
+    };
+    opts.forEach(function (o) {
+      var opt = document.createElement("option");
+      opt.value = o.trim();
+      opt.textContent = rotulos[o.trim()] || o.trim();
+      sel.appendChild(opt);
+    });
+    document.getElementById("btnPublicar").onclick = function () {
+      this.disabled = true;
+      this.textContent = "Publicando...";
+      location.href = BACKEND + "/publicar?sess=" + encodeURIComponent(qs("sess")) +
+                      "&privacidade=" + encodeURIComponent(sel.value);
+    };
+  } else if (qs("ok")) {
+    document.getElementById("passo1").classList.add("oculto");
+    document.getElementById("passo3ok").classList.remove("oculto");
+    document.getElementById("pubId").textContent = qs("pub") || "—";
+    document.getElementById("pubStatus").textContent = qs("status") || "—";
+    document.getElementById("pubPriv").textContent = qs("priv") || "—";
+  } else if (qs("erro")) {
+    document.getElementById("passo1").classList.add("oculto");
+    document.getElementById("passo3erro").classList.remove("oculto");
+    document.getElementById("msgErro").textContent = qs("erro");
+  } else {
+    document.getElementById("btnLogin").onclick = function () {
+      var estado = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      sessionStorage.setItem("tt_state", state);
+      var p = new URLSearchParams({
+        client_key: CLIENT_KEY,
+        scope: ESCOPO,
+        response_type: "code",
+        redirect_uri: REDIRECT_URI,
+        state: state
+      });
+      location.href = "https://www.tiktok.com/v2/auth/authorize/?" + p.toString();
+    };
+  }
+</script>
+</body>
+</html>
