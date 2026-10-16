@@ -100,6 +100,16 @@
 
   function qs(k) { return new URLSearchParams(location.search).get(k); }
 
+  window.onerror = function (msg, src, linha) {
+    try {
+      document.getElementById("passo1").classList.add("oculto");
+      document.getElementById("passo3erro").classList.remove("oculto");
+      document.getElementById("msgErro").textContent =
+        "Erro no site: " + msg + " (linha " + linha + "). Avise o Everton.";
+    } catch (e) {}
+    return false;
+  };
+
   if (qs("code")) {
     // voltou do TikTok: manda o codigo para o servidor local (troca por token e busca os dados do criador)
     location.replace(BACKEND + "/callback?" + location.search.replace(/^\?/, ""));
@@ -143,13 +153,13 @@
   } else {
     document.getElementById("btnLogin").onclick = function () {
       var estado = Math.random().toString(36).slice(2) + Date.now().toString(36);
-      sessionStorage.setItem("tt_state", state);
+      try { sessionStorage.setItem("tt_state", estado); } catch (e) {}
       var p = new URLSearchParams({
         client_key: CLIENT_KEY,
         scope: ESCOPO,
         response_type: "code",
         redirect_uri: REDIRECT_URI,
-        state: state
+        state: estado
       });
       location.href = "https://www.tiktok.com/v2/auth/authorize/?" + p.toString();
     };
